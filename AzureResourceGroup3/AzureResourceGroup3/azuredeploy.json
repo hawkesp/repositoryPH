@@ -1,0 +1,109 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "blankvmPLHName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "blankvmPLHAdminUserName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "blankvmPLHAdminPassword": {
+            "type": "securestring"
+        },
+        "blankvmPLHWindowsOSVersion": {
+            "type": "string",
+            "defaultValue": "2012-R2-Datacenter",
+            "allowedValues": [
+                "2008-R2-SP1",
+                "2012-Datacenter",
+                "2012-R2-Datacenter",
+                "Windows-Server-Technical-Preview"
+            ]
+        }
+    },
+    "variables": {
+        "blankvmPLHImagePublisher": "MicrosoftWindowsServer",
+        "blankvmPLHImageOffer": "WindowsServer",
+        "blankvmPLHOSDiskName": "blankvmPLHOSDisk",
+        "blankvmPLHVmSize": "Standard_D2_v2",
+        "blankvmPLHVnetID": "/subscriptions/e2e75f95-ca9b-4d7d-ad9a-f8efe3794d28/resourceGroups/AzurePOC_Network/providers/Microsoft.Network/virtualNetworks/AzurePOCvnet",
+        "blankvmPLHSubnetRef": "[concat(variables('blankvmPLHVnetID'), '/subnets/', 'WebServers')]",
+        "blankvmPLHStorageAccountContainerName": "vhds",
+        "blankvmPLHNicName": "[concat(parameters('blankvmPLHName'), 'NetworkInterface')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('blankvmPLHNicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "australiasoutheast",
+            "apiVersion": "2015-06-15",
+            "dependsOn": [ ],
+            "tags": {
+                "displayName": "blankvmPLHNic"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('blankvmPLHSubnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('blankvmPLHName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "location": "australiasoutheast",
+            "apiVersion": "2015-06-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('blankvmPLHNicName'))]"
+            ],
+            "tags": {
+                "displayName": "blankvmPLH"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('blankvmPLHVmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('blankvmPLHName')]",
+                    "adminUsername": "[parameters('blankvmPLHAdminUsername')]",
+                    "adminPassword": "[parameters('blankvmPLHAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('blankvmPLHImagePublisher')]",
+                        "offer": "[variables('blankvmPLHImageOffer')]",
+                        "sku": "[parameters('blankvmPLHWindowsOSVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "blankvmPLHOSDisk",
+                        "vhd": {
+                            "uri": "[concat('https://', 'stagee2e75f95ca9b4d7dad9', '.blob.core.windows.net/', variables('blankvmPLHStorageAccountContainerName'), '/', variables('blankvmPLHOSDiskName'), '.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('blankvmPLHNicName'))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
